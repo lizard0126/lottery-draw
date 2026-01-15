@@ -27,13 +27,14 @@
             flex: 1;
             align-items: center;
             justify-content: center;
+            padding: 20px;
         }
 
         .panel {
-            width: 360px;
+            width: 380px;
             background: #fff;
             border-radius: 10px;
-            padding: 16px;
+            padding: 20px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
@@ -47,7 +48,7 @@
         .prize {
             display: flex;
             gap: 6px;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
 
         #members,
@@ -61,14 +62,14 @@
         input[type="number"] {
             width: 80px;
             flex: 1;
-            padding: 4px 8px;
+            padding: 6px 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
             font-size: 14px;
         }
 
         button {
-            padding: 4px 12px;
+            padding: 6px 12px;
             border: none;
             background-color: #3498db;
             color: white;
@@ -79,6 +80,69 @@
 
         button:hover {
             background-color: #2980b9;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .button-group button {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .import-btn {
+            background-color: #2ecc71;
+        }
+
+        .import-btn:hover {
+            background-color: #27ae60;
+        }
+
+        .clear-btn {
+            background-color: #e74c3c;
+        }
+
+        .clear-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .file-input-container {
+            margin-bottom: 12px;
+            padding: 10px;
+            border: 2px dashed #ddd;
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .file-input-container:hover {
+            border-color: #3498db;
+        }
+
+        .file-input-label {
+            display: block;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .file-input-label span {
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-format-hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
         }
 
         .wheel-box {
@@ -104,6 +168,7 @@
             border-left: 10px solid transparent;
             border-right: 10px solid transparent;
             border-top: 20px solid #000000;
+            z-index: 10;
         }
 
         input.result {
@@ -117,9 +182,22 @@
             text-align: center;
             font-size: 12px;
             color: #888;
-            padding: 8px 0;
+            padding: 12px 0;
             border-top: 1px solid #ddd;
             background-color: #fafafa;
+            margin-top: 20px;
+        }
+
+        .member-count {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #eee;
+            margin: 16px 0;
         }
     </style>
 </head>
@@ -128,14 +206,30 @@
     <div class="app-container">
         <div class="panel">
             <h3>参与抽奖</h3>
-            <div id="members"></div>
-            <button onclick="addMember()">➕ 添加参与者</button>
+            <div class="member-count">当前抽奖人数：<span id="memberCount">3</span>人</div>
 
-            <hr>
+            <div class="file-input-container" onclick="document.getElementById('fileInput').click()">
+                <label class="file-input-label">
+                    📁 <span>点击上传表格文件</span> 或拖放文件到这里
+                </label>
+                <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.txt" onchange="handleFileUpload(event)">
+                <div class="file-format-hint">支持CSV、TXT格式（姓名,权重分两列）</div>
+            </div>
+
+            <div class="button-group">
+                <button onclick="addMember()">➕ 添加参与者</button>
+                <button class="import-btn" onclick="document.getElementById('fileInput').click()">📁 导入表格</button>
+                <button class="clear-btn" onclick="clearAllMembers()">🗑️ 清空列表</button>
+            </div>
+
+            <div id="members"></div>
 
             <h3>抽奖项目</h3>
+            <div class="button-group">
+                <button onclick="addPrize()">➕ 添加项目</button>
+                <button class="clear-btn" onclick="clearAllPrizes()">🗑️ 清空奖项</button>
+            </div>
             <div id="prizes"></div>
-            <button onclick="addPrize()">➕ 添加项目</button>
         </div>
 
         <div class="wheel-box">
@@ -168,6 +262,10 @@
             { name: '节操部神秘大奖', result: '' },
         ];
 
+        function updateMemberCount() {
+            document.getElementById('memberCount').textContent = members.length;
+        }
+
         function renderMembers() {
             const box = document.getElementById('members');
             box.innerHTML = '';
@@ -176,11 +274,12 @@
                     <div class="member">
                         <input value="${m.name}" oninput="members[${i}].name=this.value; draw()">
                         <input type="number" min="1" value="${m.weight}" oninput="members[${i}].weight=+this.value||1; draw()">
-                        <button onclick="members.splice(${i},1); renderMembers(); draw()">✖</button>
+                        <button onclick="members.splice(${i},1); renderMembers(); draw(); updateMemberCount()">✖</button>
                     </div>
                 `;
             });
             box.scrollTop = box.scrollHeight;
+            updateMemberCount();
         }
 
         function renderPrizes() {
@@ -209,9 +308,34 @@
             renderPrizes();
         }
 
+        function clearAllMembers() {
+            if (confirm('确定要清空所有参与者吗？')) {
+                members = [];
+                renderMembers();
+                draw();
+            }
+        }
+
+        function clearAllPrizes() {
+            if (confirm('确定要清空所有奖项吗？')) {
+                prizes = [];
+                renderPrizes();
+            }
+        }
+
         function draw() {
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.clearRect(0, 0, W, H);
+
+            if (members.length === 0) {
+                ctx.font = '16px "font", sans-serif';
+                ctx.fillStyle = '#999';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('暂无参与者', cx, cy);
+                return;
+            }
+
             const total = members.reduce((s, m) => s + m.weight, 0);
             let start = angle;
             members.forEach((m, i) => {
@@ -219,18 +343,23 @@
                 ctx.beginPath();
                 ctx.moveTo(cx, cy);
                 ctx.arc(cx, cy, radius, start, start + arc);
-                ctx.fillStyle = `hsl(${i * 360 / members.length},70%,60%)`;
+                ctx.fillStyle = `hsl(${i * 360 / Math.max(members.length, 1)},70%,60%)`;
                 ctx.fill();
 
                 ctx.save();
                 ctx.translate(cx, cy);
                 ctx.rotate(start + arc / 2);
                 ctx.textAlign = 'right';
-                ctx.font = 'bold 15px "font", sans-serif';
-                ctx.fillStyle = '#000';
-                ctx.shadowColor = '#fff';
+                ctx.font = '14px "font", sans-serif';
+                ctx.fillStyle = '#fff';
+                ctx.shadowColor = '#000';
                 ctx.shadowBlur = 10;
-                ctx.fillText(m.name, radius - 12, 5);
+
+                let displayName = m.name;
+                if (displayName.length > 8) {
+                    displayName = displayName.substring(0, 7) + '...';
+                }
+                ctx.fillText(displayName, radius - 12, 5);
                 ctx.shadowBlur = 0;
                 ctx.restore();
 
@@ -264,6 +393,7 @@
         }
 
         function calcResultByPointer() {
+            if (members.length === 0) return '无参与者';
             const total = members.reduce((s, m) => s + m.weight, 0);
             let pointerAngle = (Math.PI * 3 / 2 - angle) % (Math.PI * 2);
             if (pointerAngle < 0) pointerAngle += Math.PI * 2;
@@ -272,6 +402,7 @@
                 acc += m.weight / total * Math.PI * 2;
                 if (pointerAngle <= acc) return m.name;
             }
+            return members[members.length - 1].name;
         }
 
         function spinPrize(index) {
@@ -281,9 +412,139 @@
             });
         }
 
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                try {
+                    const content = e.target.result;
+                    const lines = parseFileContent(content, file.name);
+
+                    if (lines.length > 0) {
+                        const choice = confirm(`成功解析 ${lines.length} 条数据，是否覆盖现有参与者？\n点击"确定"覆盖，点击"取消"追加到现有列表。`);
+
+                        if (choice) {
+                            members = lines;
+                        } else {
+                            const existingNames = new Set(members.map(m => m.name));
+                            const newMembers = lines.filter(m => !existingNames.has(m.name));
+                            members.push(...newMembers);
+                        }
+
+                        renderMembers();
+                        draw();
+                        alert(`成功${choice ? '替换' : '添加'} ${lines.length} 位参与者！`);
+                    } else {
+                        alert('未找到有效数据，请检查文件格式！');
+                    }
+                } catch (error) {
+                    alert('文件解析失败：' + error.message);
+                }
+
+                event.target.value = '';
+            };
+
+            reader.onerror = function () {
+                alert('文件读取失败，请重试！');
+                event.target.value = '';
+            };
+
+            if (file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls')) {
+                alert('Excel文件需要特殊的解析库，建议您将文件另存为CSV格式再导入。');
+                event.target.value = '';
+                return;
+            } else {
+                reader.readAsText(file, 'UTF-8');
+            }
+        }
+
+        function parseFileContent(content, fileName) {
+            const members = [];
+            const lines = content.split(/\r\n|\n|\r/);
+
+            let startLine = 0;
+            if (lines.length > 0 &&
+                (lines[0].toLowerCase().includes('姓名') ||
+                    lines[0].toLowerCase().includes('name') ||
+                    lines[0].toLowerCase().includes('weight') ||
+                    lines[0].toLowerCase().includes('权重'))) {
+                startLine = 1;
+            }
+
+            for (let i = startLine; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                let parts;
+                if (line.includes(',')) {
+                    parts = line.split(',');
+                } else if (line.includes('\t')) {
+                    parts = line.split('\t');
+                } else {
+                    parts = line.split(/\s+/);
+                }
+
+                if (parts.length >= 1) {
+                    const name = parts[0].trim();
+                    let weight = 1;
+
+                    if (parts.length >= 2) {
+                        const weightStr = parts[1].trim();
+                        const parsedWeight = parseFloat(weightStr);
+                        if (!isNaN(parsedWeight) && parsedWeight > 0) {
+                            weight = parsedWeight;
+                        }
+                    }
+
+                    if (name) {
+                        members.push({ name, weight });
+                    }
+                }
+            }
+
+            return members;
+        }
+
+        function setupDragAndDrop() {
+            const dropZone = document.querySelector('.file-input-container');
+
+            dropZone.addEventListener('dragover', function (e) {
+                e.preventDefault();
+                dropZone.style.borderColor = '#3498db';
+                dropZone.style.backgroundColor = '#f0f7ff';
+            });
+
+            dropZone.addEventListener('dragleave', function (e) {
+                e.preventDefault();
+                dropZone.style.borderColor = '#ddd';
+                dropZone.style.backgroundColor = '';
+            });
+
+            dropZone.addEventListener('drop', function (e) {
+                e.preventDefault();
+                dropZone.style.borderColor = '#ddd';
+                dropZone.style.backgroundColor = '';
+
+                if (e.dataTransfer.files.length) {
+                    const file = e.dataTransfer.files[0];
+
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    document.getElementById('fileInput').files = dataTransfer.files;
+
+                    const event = new Event('change', { bubbles: true });
+                    document.getElementById('fileInput').dispatchEvent(event);
+                }
+            });
+        }
+
         renderMembers();
         renderPrizes();
         draw();
+        setupDragAndDrop();
     </script>
 </body>
 
